@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { PlayIcon, StopIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid'
-import { Server } from '@/types'
+import { Server, ServerStatus } from '@/types'
 
 interface ServerCardProps {
   server: Server
@@ -36,7 +36,7 @@ export function ServerCard({ server }: ServerCardProps) {
     }
   }
 
-  const isRunning = server.status === 'running'
+  const isRunning = server.status === ServerStatus.ACTIVE
 
   return (
     <div className="bg-white rounded-lg shadow hover:shadow-md transition-shadow p-6">
