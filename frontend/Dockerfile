@@ -8,8 +8,7 @@ ARG BUILD_DATE
 ARG VERSION
 
 # Set environment variables
-ENV NODE_ENV=production \
-    NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Install dependencies for native modules
 RUN apk add --no-cache libc6-compat
@@ -21,6 +20,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies (including dev dependencies for build)
+# Don't set NODE_ENV=production yet so devDependencies are installed
 RUN npm install
 
 # Copy source code
@@ -28,7 +28,8 @@ COPY . .
 
 # Set build-time environment variables
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
-    NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL}
+    NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL} \
+    NODE_ENV=production
 
 # Build application
 RUN npm run build
