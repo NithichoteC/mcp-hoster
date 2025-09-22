@@ -69,8 +69,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY src/ ./src/
-COPY alembic.ini .
-COPY alembic/ ./alembic/
+# Note: Alembic database migrations not needed for initial SQLite deployment
 
 # Create directories for MCP servers and data
 RUN mkdir -p \
