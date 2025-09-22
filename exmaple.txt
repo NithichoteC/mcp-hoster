@@ -1,0 +1,137 @@
+# Code
+
+- 📁 app
+    - 📁 src
+        - 📃 server.py
+            
+            ```python
+            """
+            
+            *** MCP Server ***
+            
+            """
+            
+            import uvicorn
+            from mcp.server.fastmcp import FastMCP
+            from fastapi import FastAPI
+            from starlette.routing import Mount
+            
+            mcp = FastMCP(name="MCP Server")
+            
+            @mcp.tool()
+            def greeting(hint: str) -> str:
+                """
+                This tool just displays a message.
+            
+                Args:
+                    hint: The hint is always "MCP Server"
+                """
+                return "Hey, Lads! This is Felix Kewa and this is my own remote MCP Server!"
+            
+            @mcp.tool()
+            def add(a: int, b: int) -> int:
+                """
+                This tool is used to add two numbers.
+            
+                Args:
+                    a: The first number
+                """
+                return a + b
+            
+            # Create a FastAPI app
+            app = FastAPI(
+                title="MCP API Server",
+                description="MCP Server",
+                version="1.0.0"
+            )
+            
+            # Mount the MCP SSE app to the root path
+            app.router.routes.append(Mount('/', app=mcp.sse_app()))
+            
+            if __name__ == "__main__":
+                # mcp.settings.host = "0.0.0.0"
+                mcp.settings.port = 3006
+                
+                # Run FastAPI app with uvicorn instead of the MCP app directly
+                uvicorn.run(app, host=mcp.settings.host, port=mcp.settings.port)
+            
+            ```
+            
+    - 📁 venv
+        - 📃 environment.yml
+            
+            ```yaml
+            # cd into the venv directory
+            # conda env create --file environment.yml
+            
+            # Update:
+            # conda activate 006-mcp-coolify
+            # conda env update --file environment.yml --prune
+            
+            # Environment name
+            name: 006-mcp-coolify
+            
+            # Dependencies and packages
+            dependencies:
+            
+              - python=3.13
+              - pip
+              - fastapi
+            
+              - pip:
+                - mcp==1.6
+                - mcp[cli]
+                - starlette
+                - uvicorn
+                - requests
+            
+            ```
+            
+    - 📃 Dockerfile
+        
+        ```docker
+        FROM python:3.11-slim
+        
+        # Install miniconda
+        RUN apt-get update && \
+            apt-get install -y wget && \
+            wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
+            bash /tmp/miniconda.sh -b -p /opt/conda && \
+            rm /tmp/miniconda.sh && \
+            apt-get clean && \
+            rm -rf /var/lib/apt/lists/*
+        
+        # Add conda to path
+        ENV PATH /opt/conda/bin:$PATH
+        
+        # Copy environment.yml
+        COPY venv/environment.yml /app/environment.yml
+        
+        # Create conda environment
+        RUN conda env create -f /app/environment.yml
+        
+        # Set up conda environment activation
+        SHELL ["/bin/bash", "-c"]
+        RUN echo "source activate 006-mcp-coolify" > ~/.bashrc
+        ENV PATH /opt/conda/envs/006-mcp-coolify/bin:$PATH
+        
+        # Set working directory
+        WORKDIR /app
+        
+        # Copy application code
+        COPY src/ /app/src/
+        # COPY .env /app/.env
+        
+        # Set Python path
+        ENV PYTHONPATH="/app/src"
+        
+        # Make sure pip dependencies are installed explicitly for the Docker env
+        RUN /opt/conda/envs/006-mcp-coolify/bin/pip install mcp mcp[cli] starlette uvicorn requests
+        
+        # Expose port
+        EXPOSE 3006
+        
+        # Run the application
+        CMD ["conda", "run", "--no-capture-output", "-n", "006-mcp-coolify", "python", "/app/src/server.py"] 
+        # CMD ["conda", "run", "--no-capture-output", "-n", "005-mcp-authentication", "python", "/app/src/server_user_injection.py"] 
+        ```
