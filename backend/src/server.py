@@ -114,38 +114,75 @@ async def root():
         }
     }
 
-@app.get("/health", response_model=SystemStatus)
-async def health_check(db: Session = Depends(get_db)):
-    """System health check endpoint"""
-    import psutil
+@app.get("/health")
+async def health_check():
+    """Simple health check endpoint without database dependency"""
+    try:
+        uptime = (datetime.utcnow() - startup_time).total_seconds()
+        return {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "uptime_seconds": int(uptime),
+            "service": "MCP Host Backend"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }
 
-    # Count servers by status
-    total_servers = db.query(MCPServer).count()
-    active_servers = db.query(MCPServer).filter(MCPServer.status == ServerStatus.ACTIVE).count()
-    inactive_servers = db.query(MCPServer).filter(MCPServer.status == ServerStatus.INACTIVE).count()
-    error_servers = db.query(MCPServer).filter(MCPServer.status == ServerStatus.ERROR).count()
+@app.get("/status", response_model=SystemStatus)
+async def system_status(db: Session = Depends(get_db)):
+    """Detailed system status with database metrics (separate from health check)"""
+    try:
+        import psutil
 
-    # Count sessions
-    from .models import Session as DBSession
-    total_sessions = db.query(DBSession).count()
-    active_sessions = db.query(DBSession).filter(DBSession.is_active == True).count()
+        # Count servers by status (with error handling)
+        try:
+            total_servers = db.query(MCPServer).count()
+            active_servers = db.query(MCPServer).filter(MCPServer.status == ServerStatus.ACTIVE).count()
+            inactive_servers = db.query(MCPServer).filter(MCPServer.status == ServerStatus.INACTIVE).count()
+            error_servers = db.query(MCPServer).filter(MCPServer.status == ServerStatus.ERROR).count()
+        except Exception:
+            total_servers = active_servers = inactive_servers = error_servers = 0
 
-    # System metrics
-    uptime = (datetime.utcnow() - startup_time).total_seconds()
-    memory_info = psutil.virtual_memory()
-    cpu_percent = psutil.cpu_percent()
+        # Count sessions (with error handling)
+        try:
+            from .models import Session as DBSession
+            total_sessions = db.query(DBSession).count()
+            active_sessions = db.query(DBSession).filter(DBSession.is_active == True).count()
+        except Exception:
+            total_sessions = active_sessions = 0
 
-    return SystemStatus(
-        total_servers=total_servers,
-        active_servers=active_servers,
-        inactive_servers=inactive_servers,
-        error_servers=error_servers,
-        total_sessions=total_sessions,
-        active_sessions=active_sessions,
-        uptime_seconds=int(uptime),
-        memory_usage_mb=memory_info.used / 1024 / 1024,
-        cpu_usage_percent=cpu_percent
-    )
+        # System metrics
+        uptime = (datetime.utcnow() - startup_time).total_seconds()
+        try:
+            memory_info = psutil.virtual_memory()
+            cpu_percent = psutil.cpu_percent()
+            memory_usage_mb = memory_info.used / 1024 / 1024
+        except Exception:
+            memory_usage_mb = 0.0
+            cpu_percent = 0.0
+
+        return SystemStatus(
+            total_servers=total_servers,
+            active_servers=active_servers,
+            inactive_servers=inactive_servers,
+            error_servers=error_servers,
+            total_sessions=total_sessions,
+            active_sessions=active_sessions,
+            uptime_seconds=int(uptime),
+            memory_usage_mb=memory_usage_mb,
+            cpu_usage_percent=cpu_percent
+        )
+    except Exception as e:
+        # Return empty status if everything fails
+        return SystemStatus(
+            total_servers=0, active_servers=0, inactive_servers=0, error_servers=0,
+            total_sessions=0, active_sessions=0, uptime_seconds=0,
+            memory_usage_mb=0.0, cpu_usage_percent=0.0
+        )
 
 # ============================================================================
 # OAUTH2 ENDPOINTS FOR CHATGPT INTEGRATION

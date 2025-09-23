@@ -13,8 +13,9 @@ if [[ "${DATABASE_URL}" == postgresql* ]]; then
     echo "✅ PostgreSQL is ready!"
 fi
 
-# Create data directories
-mkdir -p /app/data /app/logs /app/mcp_servers
+# Data directories already created in Dockerfile
+# Ensure proper ownership
+chown -R mcphost:mcphost /app/data /app/logs /app/mcp_servers 2>/dev/null || true
 
 # Run database migrations
 echo "🔄 Running database migrations..."
@@ -22,7 +23,7 @@ if command -v alembic &> /dev/null; then
     alembic upgrade head
 else
     echo "⚠️  Alembic not found, creating tables directly..."
-    cd /app && python -c "from src.database import init_db; init_db()"
+    cd /app && python -c "from src.database import init_db; init_db()" || echo "⚠️  Database initialization failed"
 fi
 
 # Install default MCP servers if directory is empty
@@ -31,8 +32,11 @@ if [ ! "$(ls -A /app/mcp_servers)" ]; then
 
     # Install n8n-mcp server
     cd /app/mcp_servers
-    npm init -y > /dev/null 2>&1
-    npm install @n8n-mcp/server > /dev/null 2>&1 || echo "⚠️  Failed to install n8n-mcp"
+    if npm init -y; then
+        npm install @n8n-mcp/server || echo "⚠️  Failed to install n8n-mcp server"
+    else
+        echo "⚠️  Failed to initialize npm in mcp_servers directory"
+    fi
 
     cd /app
 fi

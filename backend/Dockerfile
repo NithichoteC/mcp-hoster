@@ -68,20 +68,21 @@ WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
+# Copy startup script first
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # Copy application code
 COPY src/ ./src/
 # Note: Alembic database migrations not needed for initial SQLite deployment
 
-# Create directories for MCP servers and data
+# Create directories for MCP servers and data, then set ownership for everything
 RUN mkdir -p \
     /app/data \
     /app/logs \
     /app/mcp_servers \
-    && chown -R mcphost:mcphost /app
-
-# Copy startup script
-COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+    && chown -R mcphost:mcphost /app \
+    && chown mcphost:mcphost /entrypoint.sh
 
 # Switch to non-root user
 USER mcphost
