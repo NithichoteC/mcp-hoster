@@ -42,6 +42,7 @@ LABEL maintainer="MCP Host Team" \
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app \
     ENVIRONMENT=production \
     HOST=0.0.0.0 \
     PORT=8000

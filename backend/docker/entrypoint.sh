@@ -22,7 +22,7 @@ if command -v alembic &> /dev/null; then
     alembic upgrade head
 else
     echo "⚠️  Alembic not found, creating tables directly..."
-    python -c "from src.database import init_db; init_db()"
+    cd /app && python -c "from src.database import init_db; init_db()"
 fi
 
 # Install default MCP servers if directory is empty
@@ -47,10 +47,6 @@ if [ -z "${SECRET_KEY}" ]; then
     export SECRET_KEY=$(python -c "import secrets; print(secrets.token_hex(32))")
     echo "⚠️  Generated random SECRET_KEY. Set SECRET_KEY environment variable for production."
 fi
-
-# Health check endpoint test
-echo "🔍 Testing health endpoint..."
-timeout 30 bash -c 'until curl -f http://localhost:8000/health 2>/dev/null; do sleep 1; done' &
 
 # Start the application
 echo "✅ Starting MCP Host Backend on port ${PORT:-8000}..."
