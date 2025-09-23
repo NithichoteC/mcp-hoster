@@ -4,10 +4,10 @@ Configuration management for MCP Host
 import os
 from pathlib import Path
 from typing import Optional, List
-from pydantic import BaseSettings, Field
-from pydantic_settings import BaseSettings as PydanticBaseSettings
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
-class Settings(PydanticBaseSettings):
+class Settings(BaseSettings):
     """Application settings with environment variable support"""
 
     # Application settings
