@@ -50,9 +50,9 @@ services:
       - backend_logs:/app/logs
       - mcp_servers:/app/mcp_servers
 
-    # Ports
-    ports:
-      - "8000:8000"
+    # Ports (managed by Coolify)
+    # ports:
+    #   - "8000:8000"  # Coolify handles port mapping automatically
 
     # Health check
     healthcheck:
@@ -97,9 +97,9 @@ services:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
       - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL:-ws://localhost:8000}
 
-    # Ports
-    ports:
-      - "3000:3000"
+    # Ports (managed by Coolify)
+    # ports:
+    #   - "3000:3000"  # Coolify handles port mapping automatically
 
     # Health check
     healthcheck:
@@ -134,10 +134,10 @@ services:
     container_name: mcp-host-nginx
     restart: unless-stopped
 
-    # Ports
-    ports:
-      - "80:80"
-      - "443:443"
+    # Ports (managed by Coolify)
+    # ports:
+    #   - "80:80"    # Coolify handles port mapping and SSL termination
+    #   - "443:443"  # Coolify manages reverse proxy automatically
 
     # Volumes
     volumes:
