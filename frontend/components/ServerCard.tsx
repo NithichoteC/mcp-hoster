@@ -86,7 +86,7 @@ export function ServerCard({ server }: ServerCardProps) {
       <div className="mb-4 p-3 bg-gray-50 rounded border">
         <div className="text-xs font-medium text-gray-700 mb-1">Endpoint:</div>
         <code className="text-xs text-gray-900 break-all">
-          {server.endpoint || `ws://localhost:8000/mcp/${server.id}`}
+          {`ws://${server.host}:${server.port || 8000}/mcp/${server.id}`}
         </code>
       </div>
 
