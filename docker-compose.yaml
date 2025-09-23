@@ -168,24 +168,12 @@ services:
 volumes:
   backend_data:
     driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data/backend
 
   backend_logs:
     driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data/logs
 
   mcp_servers:
     driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data/mcp_servers
 
   nginx_ssl:
     driver: local
