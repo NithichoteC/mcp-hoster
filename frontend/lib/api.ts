@@ -209,5 +209,4 @@ export function useApi() {
 // Export client for direct use
 export { apiClient as api }
 
-// Export types
-export type { ApiError }
+// Export types (ApiError already exported as interface above)
