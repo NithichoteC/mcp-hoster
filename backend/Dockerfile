@@ -70,6 +70,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY src/ ./src/
+COPY debug_startup.py ./
 
 # Create directories for dynamic MCP server installation
 RUN mkdir -p \
@@ -81,12 +82,12 @@ RUN mkdir -p \
 # Switch to non-root user
 USER mcphost
 
-# Health check - simple and fast (extended start period for debugging)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+# Health check - simple and fast
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Expose port
 EXPOSE 8000
 
-# Simple FastAPI command (following FastAPI best practices)
-CMD ["python", "-m", "uvicorn", "src.server:app", "--host", "0.0.0.0", "--port", "8000"]
+# Debug startup then run FastAPI
+CMD ["sh", "-c", "python debug_startup.py && uvicorn src.server:app --host 0.0.0.0 --port 8000"]

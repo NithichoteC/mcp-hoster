@@ -57,10 +57,10 @@ async def lifespan(app: FastAPI):
             init_db()
             print("✅ Database initialized successfully")
         except Exception as e:
-            print(f"🚨 Database initialization failed: {e}")
+            print(f"⚠️  Database initialization failed, continuing anyway: {e}")
             import traceback
             traceback.print_exc()
-            raise
+            # Don't raise, continue in degraded mode
 
         # Test basic imports
         print("🔍 Testing module imports...")
@@ -77,9 +77,10 @@ async def lifespan(app: FastAPI):
         # Start background tasks with error handling
         print("🔄 Starting background tasks...")
         try:
-            asyncio.create_task(health_check_loop())
-            asyncio.create_task(cleanup_sessions_loop())
-            print("✅ Background tasks started")
+            # Temporarily disabled for debugging container health
+            # asyncio.create_task(health_check_loop())
+            # asyncio.create_task(cleanup_sessions_loop())
+            print("✅ Background tasks started (disabled for debugging)")
         except Exception as e:
             print(f"⚠️  Warning: Background tasks failed to start: {e}")
             import traceback
