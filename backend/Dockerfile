@@ -68,34 +68,29 @@ WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Copy startup script first
-COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
 # Copy application code
 COPY src/ ./src/
-# Note: Alembic database migrations not needed for initial SQLite deployment
 
-# Create directories for MCP servers and data, then set ownership for everything
+# Create directories and install n8n-mcp server at build time (not runtime)
 RUN mkdir -p \
     /app/data \
     /app/logs \
     /app/mcp_servers \
-    && chown -R mcphost:mcphost /app \
-    && chown mcphost:mcphost /entrypoint.sh
+    && cd /app/mcp_servers \
+    && npm init -y \
+    && npm install @n8n-mcp/server \
+    && cd /app \
+    && chown -R mcphost:mcphost /app
 
 # Switch to non-root user
 USER mcphost
 
-# Health check
+# Health check - simple and fast
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/health || exit 1
+    CMD curl -f http://localhost:8000/health || exit 1
 
 # Expose port
-EXPOSE ${PORT}
+EXPOSE 8000
 
-# Set entrypoint
-ENTRYPOINT ["/entrypoint.sh"]
-
-# Default command
+# Simple FastAPI command (following FastAPI best practices)
 CMD ["python", "-m", "uvicorn", "src.server:app", "--host", "0.0.0.0", "--port", "8000"]

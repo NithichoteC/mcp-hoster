@@ -48,24 +48,47 @@ async def lifespan(app: FastAPI):
     # Startup
     print("🚀 Starting MCP Host Server...")
 
-    # Initialize database
-    init_db()
+    try:
+        # Initialize database
+        print("📊 Initializing database...")
+        init_db()
+        print("✅ Database initialized")
 
-    # Start background tasks
-    asyncio.create_task(health_check_loop())
-    asyncio.create_task(cleanup_sessions_loop())
+        # Start background tasks with error handling
+        print("🔄 Starting background tasks...")
+        try:
+            asyncio.create_task(health_check_loop())
+            asyncio.create_task(cleanup_sessions_loop())
+            print("✅ Background tasks started")
+        except Exception as e:
+            print(f"⚠️  Warning: Background tasks failed to start: {e}")
 
-    print(f"✅ MCP Host Server started on http://{settings.host}:{settings.port}")
+        print(f"✅ MCP Host Server started on http://{settings.host}:{settings.port}")
+
+    except Exception as e:
+        print(f"🚨 Critical error during startup: {e}")
+        # Still yield to allow the app to start, but in degraded mode
+        print("⚠️  Starting in degraded mode...")
     yield
 
     # Shutdown
     print("🛑 Shutting down MCP Host Server...")
 
     # Stop all active servers
-    db = next(get_db())
-    active_servers = db.query(MCPServer).filter(MCPServer.status == ServerStatus.ACTIVE).all()
-    for server in active_servers:
-        await server_manager.stop_server(db, server.id)
+    try:
+        from .database import SessionLocal
+        db = SessionLocal()
+        try:
+            active_servers = db.query(MCPServer).filter(MCPServer.status == ServerStatus.ACTIVE).all()
+            for server in active_servers:
+                try:
+                    await server_manager.stop_server(db, server.id)
+                except Exception as e:
+                    print(f"⚠️  Failed to stop server {server.id}: {e}")
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"⚠️  Error during server shutdown: {e}")
 
     print("✅ MCP Host Server shutdown complete")
 
