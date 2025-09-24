@@ -81,8 +81,8 @@ RUN mkdir -p \
 # Switch to non-root user
 USER mcphost
 
-# Health check - simple and fast
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+# Health check - simple and fast (extended start period for debugging)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Expose port

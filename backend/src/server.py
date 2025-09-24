@@ -46,13 +46,33 @@ startup_time = datetime.utcnow()
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
-    print("🚀 Starting MCP Host Server...")
-
     try:
+        print("🚀 Starting MCP Host Server...")
+        print(f"📍 Working directory: {os.getcwd()}")
+        print(f"📍 Python path: {os.environ.get('PYTHONPATH', 'Not set')}")
+
         # Initialize database
         print("📊 Initializing database...")
-        init_db()
-        print("✅ Database initialized")
+        try:
+            init_db()
+            print("✅ Database initialized successfully")
+        except Exception as e:
+            print(f"🚨 Database initialization failed: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
+
+        # Test basic imports
+        print("🔍 Testing module imports...")
+        try:
+            from .models import MCPServer
+            from .gateway import server_manager, gateway
+            print("✅ Module imports successful")
+        except Exception as e:
+            print(f"🚨 Module import failed: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
 
         # Start background tasks with error handling
         print("🔄 Starting background tasks...")
@@ -62,11 +82,15 @@ async def lifespan(app: FastAPI):
             print("✅ Background tasks started")
         except Exception as e:
             print(f"⚠️  Warning: Background tasks failed to start: {e}")
+            import traceback
+            traceback.print_exc()
 
-        print(f"✅ MCP Host Server started on http://{settings.host}:{settings.port}")
+        print(f"✅ MCP Host Server startup complete on http://{settings.host}:{settings.port}")
 
     except Exception as e:
-        print(f"🚨 Critical error during startup: {e}")
+        print(f"🚨 CRITICAL ERROR during startup: {e}")
+        import traceback
+        traceback.print_exc()
         # Still yield to allow the app to start, but in degraded mode
         print("⚠️  Starting in degraded mode...")
     yield
@@ -639,15 +663,19 @@ async def health_check_loop():
     """Background task for health checking servers"""
     while True:
         try:
-            db = next(get_db())
-            active_servers = db.query(MCPServer).filter(MCPServer.status == ServerStatus.ACTIVE).all()
+            from .database import SessionLocal
+            db = SessionLocal()
+            try:
+                active_servers = db.query(MCPServer).filter(MCPServer.status == ServerStatus.ACTIVE).all()
 
-            for server in active_servers:
-                # Check if health check is due
-                if (not server.last_health_check or
-                    datetime.utcnow() - server.last_health_check > timedelta(seconds=server.health_check_interval)):
+                for server in active_servers:
+                    # Check if health check is due
+                    if (not server.last_health_check or
+                        datetime.utcnow() - server.last_health_check > timedelta(seconds=server.health_check_interval)):
 
-                    await server_manager.health_check(db, server.id)
+                        await server_manager.health_check(db, server.id)
+            finally:
+                db.close()
 
             await asyncio.sleep(30)  # Check every 30 seconds
 
@@ -659,22 +687,26 @@ async def cleanup_sessions_loop():
     """Background task for cleaning up inactive sessions"""
     while True:
         try:
-            db = next(get_db())
+            from .database import SessionLocal
             from .models import Session as DBSession
 
-            # Mark sessions inactive after 1 hour of inactivity
-            cutoff_time = datetime.utcnow() - timedelta(hours=1)
-            inactive_sessions = db.query(DBSession).filter(
-                DBSession.last_activity < cutoff_time,
-                DBSession.is_active == True
-            ).all()
+            db = SessionLocal()
+            try:
+                # Mark sessions inactive after 1 hour of inactivity
+                cutoff_time = datetime.utcnow() - timedelta(hours=1)
+                inactive_sessions = db.query(DBSession).filter(
+                    DBSession.last_activity < cutoff_time,
+                    DBSession.is_active == True
+                ).all()
 
-            for session in inactive_sessions:
-                session.is_active = False
-                # Clean up from gateway memory
-                gateway.sessions.pop(session.session_id, None)
+                for session in inactive_sessions:
+                    session.is_active = False
+                    # Clean up from gateway memory
+                    gateway.sessions.pop(session.session_id, None)
 
-            db.commit()
+                db.commit()
+            finally:
+                db.close()
             await asyncio.sleep(3600)  # Clean up every hour
 
         except Exception as e:
