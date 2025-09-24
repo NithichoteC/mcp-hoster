@@ -71,15 +71,11 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Copy application code
 COPY src/ ./src/
 
-# Create directories and install n8n-mcp server at build time (not runtime)
+# Create directories for dynamic MCP server installation
 RUN mkdir -p \
     /app/data \
     /app/logs \
     /app/mcp_servers \
-    && cd /app/mcp_servers \
-    && npm init -y \
-    && npm install @n8n-mcp/server \
-    && cd /app \
     && chown -R mcphost:mcphost /app
 
 # Switch to non-root user
